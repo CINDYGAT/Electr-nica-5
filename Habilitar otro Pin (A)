@@ -1,0 +1,146 @@
+;---------Reloj de la Tiva--------------------------------
+SYSCTL_RCGCGPIO_R 	   EQU 0x400FE608
+;PUERTO F
+;---------Modo Analógico----------------------------------
+GPIO_PORTF_AMSEL_R     EQU 0x40025528;
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTF_PCTL_R      EQU 0x4002552C;
+;---------Especificación de dirección---------------------
+GPIO_PORTF_DIR_R      EQU   0x40025400;
+;---------Funciones Alternativas--------------------------
+GPIO_PORTF_AFSEL_R    EQU   0x40025420;
+;---------Habilita el modo digital------------------------
+GPIO_PORTF_DEN_R      EQU   0x4002551C;
+;PUERTO A
+;---------Modo Analógico----------------------------------
+GPIO_PORTA_AMSEL_R     EQU 0x40004528;
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTA_PCTL_R      EQU 0x4000452C;
+;---------Especificación de dirección---------------------
+GPIO_PORTA_DIR_R      EQU   0x40004400;
+;---------Funciones Alternativas--------------------------
+GPIO_PORTA_AFSEL_R    EQU   0x40004420;
+;---------Habilita el modo digital------------------------
+GPIO_PORTA_DEN_R      EQU   0x4000451C;
+
+
+
+LEDS      EQU 0x40025038 ; Suma de todos los puertos. en decimal
+Boton  EQU 0x40004012 ; Suma de todos los botones. en decimal
+
+	
+		AREA    |.text|, CODE, READONLY, ALIGN=2
+        THUMB
+        EXPORT  Start
+Start
+
+  LDR R1, =SYSCTL_RCGCGPIO_R      
+    LDR R0, [R1]                   
+    ORR R0, R0, #0x21 ; se suma como esta en el pdf
+    STR R0, [R1]                    
+    NOP
+    NOP                            
+    
+                 ;ESTO ES BOTONES  
+    LDR R1, =GPIO_PORTA_DIR_R       
+    LDR R0, [R1]                    
+    BIC R0, R0, #0x0C          
+    STR R0, [R1]                    
+    
+    LDR R1, =GPIO_PORTA_AFSEL_R     
+    LDR R0, [R1]                   
+    BIC R0, R0, #0x0C          
+    STR R0, [R1]                    
+    
+                
+    LDR R1, =GPIO_PORTA_DEN_R       
+    LDR R0, [R1]                    
+    ORR R0, R0, #0x0C          
+    STR R0, [R1]                    
+    
+    LDR R1, =GPIO_PORTA_PCTL_R      
+    LDR R0, [R1]                    
+    BIC R0, R0, #2_00001100         
+   ; ADD R0, R0, #0x00000000         
+    STR R0, [R1]                    
+	;LEDS
+   ;--------Desactiva la función analógica------------------
+	LDR R1, =GPIO_PORTF_AMSEL_R;
+	LDR R0, [R1]
+	BIC R0, R0, #0x0E; Valor segun el numero del puerto. 
+	STR R0, [R1]
+;--------Permite deshabilitar las funciones alternativas-
+	LDR R1, =GPIO_PORTF_PCTL_R 
+	LDR R0, [R1]
+	
+	BIC R0, R0, #2_00001110;  Configura el puerto como GPIO. 
+	 
+	
+	STR R0, [R1]
+;--------Configuración como I/O--------------------------
+	LDR R1, =GPIO_PORTF_DIR_R 
+	LDR R0, [R1]
+	ORR R0, R0, #0x0E;  Output. Valor segun el numero del puerto.
+	STR R0, [R1]
+	
+	LDR R1, =GPIO_PORTF_DIR_R 
+	LDR R0, [R1]
+	ORR R0, R0, #0x0E;  Output. Valor segun el numero del puerto.
+	STR R0, [R1]
+;--------Deshabilita las funciones alternativas----------	
+	LDR R1, =GPIO_PORTF_AFSEL_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x0E;  Desabilita las demas funciones. 
+	STR R0, [R1]
+;--------Habilita el puerto como entrada y salida digital-
+	LDR R1, =GPIO_PORTF_DEN_R       
+    LDR R0, [R1]                    
+    ORR	 R0,#0x0E;		Activa el puerto digital.    
+    STR R0, [R1]    
+	
+	; AQUI COMIENZA LA RUTINA
+Leer
+    LDR R1, =Boton              
+    LDR R0, [R1]                    
+ 
+ 
+loop
+    
+    CMP R0, #0x04                
+    BEQ B1                
+    CMP R0, #0x08                   
+    BEQ B2                 
+    CMP R0, #0x00                  
+    BEQ B1yB2                 
+    CMP R0, #0x12                 
+    BEQ Nada                
+                                    
+    STR R9, [R4]                   
+    B   loop
+B1
+	STR R0, [R1]                    
+    LDR R4, =LEDS                 
+    MOV R5, #0x02                  
+    STR R5, [R4]                    
+    B Leer
+B2
+	STR R0, [R1]                    
+    LDR R4, =LEDS                 
+    MOV R5, #0x04 
+    STR R5, [R4]                    
+    B   Leer
+B1yB2
+    STR R0, [R1]                    
+    LDR R4, =LEDS                 
+    MOV R5, #0x06 
+    STR R5, [R4]                   
+    B   Leer
+Nada
+    STR R0, [R1]                    
+    LDR R4, =LEDS                 
+    MOV R5, #0x00 
+    STR R5, [R4]                   
+    B   Leer
+
+    ALIGN                           
+    END  
