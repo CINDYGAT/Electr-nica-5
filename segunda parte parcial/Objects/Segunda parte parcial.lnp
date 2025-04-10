@@ -1,0 +1,7 @@
+--cpu=Cortex-M4.fp.sp
+".\objects\progra.o"
+".\objects\startup.o"
+--strict --scatter ".\Objects\Segunda parte parcial.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list ".\Listings\Segunda parte parcial.map" -o ".\Objects\Segunda parte parcial.axf"
