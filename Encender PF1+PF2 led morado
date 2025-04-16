@@ -1,0 +1,75 @@
+;Este codigo sirve para encender PF1 Y PF2 para encender el Led Morado (rojo (PF1) + azul(PF2))
+;---------Reloj de la Tiva--------------------------------
+SYSCTL_RCGCGPIO_R 	   EQU 0x400FE608   ; Habilita el reloj para el puerto F
+;---------Modo Analógico----------------------------------
+GPIO_PORTF_AMSEL_R     EQU 0x40025528   ; Desactiva el modo analógico
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTF_PCTL_R      EQU 0x4002552C   ; Deshabilita funciones alternativas
+;---------Especificación de dirección---------------------
+GPIO_PORTF_DIR_R       EQU 0x40025400   ; Configura dirección (entrada/salida)
+;---------Funciones Alternativas--------------------------
+GPIO_PORTF_AFSEL_R     EQU 0x40025420   ; Selección de funciones alternativas
+;---------Habilita el modo digital------------------------
+GPIO_PORTF_DEN_R       EQU 0x4002551C   ; Habilita el modo digital
+;---------Dirección base del Puerto F---------------------
+GPIO_PORTF_DATA_R      EQU 0x40025000   ; Controla todos los pines del puerto F
+PF123 EQU 0x40025038; Esta suma se realiza en hexadecimal
+PCTL EQU 0x00000FFF; Valor agregado, mayores a 255.
+
+		AREA    |.text|, CODE, READONLY, ALIGN=2
+        THUMB
+        EXPORT  Start
+
+Start
+	BL Hola                ; Configura PF1 y PF2
+	B  LED                 ; Salta a encender los LEDs
+
+Hola
+;---------Reloj para el puerto F-------------------------
+	LDR R1, =SYSCTL_RCGCGPIO_R
+	LDR R0, [R1]
+	ORR R0, R0, #0x20      ; Activa el bit 5 (puerto F)
+	STR R0, [R1]
+	NOP
+	NOP
+
+;--------Desactiva la función analógica------------------
+	LDR R1, =GPIO_PORTF_AMSEL_R
+	LDR R0, [R1]
+	BIC R0, R0, #0x06      ; PF1 (bit 1) y PF2 (bit 2) en modo digital
+	STR R0, [R1]
+
+;--------Permite deshabilitar las funciones alternativas-
+	LDR R1, =GPIO_PORTF_PCTL_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x000000FF ; Configura PF1 y PF2 como GPIO (limpia bits 0-7)
+	STR R0, [R1]
+
+;--------Configuración como I/O--------------------------
+	LDR R1, =GPIO_PORTF_DIR_R 
+	LDR R0, [R1]
+	ORR R0, R0, #0x06      ; PF1 (bit 1) y PF2 (bit 2) como salidas
+	STR R0, [R1]
+
+;--------Deshabilita las funciones alternativas----------	
+	LDR R1, =GPIO_PORTF_AFSEL_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x06      ; Desactiva funciones alternativas en PF1 y PF2
+	STR R0, [R1]
+
+;--------Habilita el puerto como entrada y salida digital-
+	LDR R1, =GPIO_PORTF_DEN_R       
+    LDR R0, [R1]                    
+    ORR	 R0, #0x06         ; Activa el modo digital en PF1 y PF2
+    STR R0, [R1]   
+	BX LR                  ; Retorno
+
+;--------Activar los Pines (PF1 + PF2 = Morado)----------
+LED
+	LDR R1, =PF123 ; Dirección base del Puerto F
+	MOV R0, #0x06              ; Bits 1 (PF1) y 2 (PF2) = 0x02 + 0x04
+	STR R0, [R1]               ; Escribe en el registro DATA
+	B LED                      ; Bucle infinito
+
+	ALIGN
+	END
