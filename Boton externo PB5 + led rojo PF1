@@ -1,7 +1,8 @@
 ;Este programa configura dos puertos GPIO en un microcontrolador Tiva TM4C:
 ;Puerto B (PB5): Se usa como entrada para leer un botón.
 ;Puerto F (PF1): Se usa como salida para controlar un LED (indicador visual).
-;Conecta PB5 a una terminal del SW1 y la otra terminal a una resistencia aterrizada a tierra.
+;Conecta PB5 a una terminal del SW1 y la otra terminal a una resistencia aterrizada a 3.3V
+;Codigo propiedad de la Inga. Fabiola España.
 
 ;---------Reloj de la Tiva--------------------------------
 SYSCTL_RCGCGPIO_R 	   EQU 0x400FE608
