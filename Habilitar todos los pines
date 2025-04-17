@@ -1,0 +1,320 @@
+;Este programa configura dos puertos GPIO en un microcontrolador Tiva TM4C:
+;Puerto A (PA2): Se usa como entrada para leer un botón.
+;Puerto F (PF1): Se usa como salida para controlar un LED (indicador visual).
+;Se configuran otros pines de los puerto A,B,C,D,E,F
+
+;---------Reloj de la Tiva--------------------------------
+SYSCTL_RCGCGPIO_R 	   EQU 0x400FE608
+	
+;---------Configuraciones Puerto A-----------------------	
+;---------Modo Analógico----------------------------------
+GPIO_PORTA_AMSEL_R     EQU 0x40004528;
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTA_PCTL_R      EQU 0x4000452C;
+;---------Especificación de dirección---------------------
+GPIO_PORTA_DIR_R      EQU  0x40004400;
+;---------Funciones Alternativas--------------------------
+GPIO_PORTA_AFSEL_R    EQU  0x40004420;
+;---------Habilita el modo digital------------------------
+GPIO_PORTA_DEN_R      EQU   0x4000451C;
+	
+;---------Configuraciones Puerto B-----------------------	
+;---------Modo Analógico----------------------------------
+GPIO_PORTB_AMSEL_R     EQU 0x40005528;
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTB_PCTL_R      EQU 0x4000552C;
+;---------Especificación de dirección---------------------
+GPIO_PORTB_DIR_R      EQU  0x40005400;
+;---------Funciones Alternativas--------------------------
+GPIO_PORTB_AFSEL_R    EQU  0x40005420;
+;---------Habilita el modo digital------------------------
+GPIO_PORTB_DEN_R      EQU   0x4000551C;
+	
+;---------Configuraciones Puerto C-----------------------	
+;---------Modo Analógico----------------------------------
+GPIO_PORTC_AMSEL_R     EQU 0x40006528;
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTC_PCTL_R      EQU 0x4000652C;
+;---------Especificación de dirección---------------------
+GPIO_PORTC_DIR_R      EQU  0x40006400;
+;---------Funciones Alternativas--------------------------
+GPIO_PORTC_AFSEL_R    EQU  0x40006420;
+;---------Habilita el modo digital------------------------
+GPIO_PORTC_DEN_R      EQU   0x4000651C;
+	
+;---------Configuraciones Puerto D-----------------------	
+;---------Modo Analógico---------------------------------
+GPIO_PORTD_AMSEL_R     EQU 0x40007528;
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTD_PCTL_R      EQU 0x4000752C;
+;---------Especificación de dirección---------------------
+GPIO_PORTD_DIR_R      EQU  0x40007400;
+;---------Funciones Alternativas--------------------------
+GPIO_PORTD_AFSEL_R    EQU  0x40007420;
+;---------Habilita el modo digital------------------------
+GPIO_PORTD_DEN_R      EQU   0x4000751C;
+	
+;---------Configuraciones Puerto E-----------------------	
+;---------Modo Analógico---------------------------------
+GPIO_PORTE_AMSEL_R     EQU 0x40024528;
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTE_PCTL_R      EQU 0x4002452C;
+;---------Especificación de dirección---------------------
+GPIO_PORTE_DIR_R      EQU  0x40024400;
+;---------Funciones Alternativas--------------------------
+GPIO_PORTE_AFSEL_R    EQU  0x40024420;
+;---------Habilita el modo digital------------------------
+GPIO_PORTE_DEN_R      EQU   0x4002451C;
+	
+;---------Configuraciones puerto F
+;---------Modo Analógico----------------------------------
+GPIO_PORTF_AMSEL_R     EQU 0x40025528;
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTF_PCTL_R      EQU 0x4002552C;
+;---------Especificación de dirección---------------------
+GPIO_PORTF_DIR_R      EQU   0x40025400;
+;---------Funciones Alternativas--------------------------
+GPIO_PORTF_AFSEL_R    EQU   0x40025420;
+;---------Habilita el modo digital------------------------
+GPIO_PORTF_DEN_R      EQU   0x4002551C;
+;---------PIN PF1-----------------------------------------
+
+;Configuraciòn de bases para encender
+PCTL 	  EQU 2_00000100; Para PA2 (0x04)
+PCTL2 	  EQU 2_00000010; Para PF1 (0x02)
+PCTL3 	  EQU 2_00100000; Para PB5 y PC5 (0X20)
+PCTL4 	  EQU 2_00000001; Para PD0 (0X01)
+PCTL5 	  EQU 2_00001000; Para PE3 (0X08)
+
+;BOTONES
+PF1       EQU 0x40025008; LED Indicador de boton pulsado
+PA2       EQU 0x40004010; Puerto A2 será el boton.
+PB5       EQU 0x40005080; Puerto B5 será el boton.
+PC5       EQU 0x40006080; Puerto C5 será el boton.
+PD0       EQU 0x40007004; Puerto D0 será el boton.
+PE3       EQU 0x40024020; Puerto E3 será el boton.	
+	
+	AREA    |.text|, CODE, READONLY, ALIGN=2
+        THUMB
+        EXPORT  Start
+Start
+	BL Configuracion
+	B Lectura
+	
+Configuracion
+;habilita el reloj de la tiva para el puerto F + puerto A +B+C+D+E
+	LDR R1, =SYSCTL_RCGCGPIO_R; Asignación de valores de constante a un registro.
+	LDR R0, [R1]
+	ORR R0, R0, #0x3F ; Valor para activar el reloj del puerto A+B+B+D+E + puerto F.
+	STR R0, [R1]
+	NOP
+	NOP
+	
+	
+ ;---------Reloj para el puerto A2-------------------------	
+;--------Desactiva la función analógica------------------
+	LDR R1, =GPIO_PORTA_AMSEL_R;
+	LDR R0, [R1]	
+	BIC R0, R0, #0x04; Valor segun el numero del puerto.
+	STR R0, [R1]
+;--------Permite deshabilitar las funciones alternativas-
+	LDR R1, =GPIO_PORTA_PCTL_R 
+	LDR R0, [R1]
+	LDR R2, =PCTL
+	LDR R3,[R2]
+	BIC R0, R0, R3;  Configura el puerto como GPIO. 
+	STR R0, [R1]
+;--------Configuración como I/O--------------------------
+	LDR R1, =GPIO_PORTA_DIR_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x04;  Output. Valor segun el numero del puerto.
+	STR R0, [R1]
+;--------Deshabilita las funciones alternativas----------	
+	LDR R1, =GPIO_PORTA_AFSEL_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x04;  Desabilita las demas funciones. 
+	STR R0, [R1]
+;--------Habilita el puerto como entrada y salida digital-
+	LDR R1, =GPIO_PORTA_DEN_R       
+    LDR R0, [R1]                    
+    ORR	 R0,#0x04;		Activa el puerto digital.    
+    STR R0, [R1]                    
+   
+;---------Reloj para el puerto B5-------------------------	
+;--------Desactiva la función analógica------------------
+	LDR R1, =GPIO_PORTB_AMSEL_R;
+	LDR R0, [R1]	
+	BIC R0, R0, #0x20; Valor segun el numero del puerto. PB5
+	STR R0, [R1]
+;--------Permite deshabilitar las funciones alternativas-
+	LDR R1, =GPIO_PORTB_PCTL_R 
+	LDR R0, [R1]
+	LDR R2, =PCTL3
+	LDR R3,[R2]
+	BIC R0, R0, R3;  Configura el puerto como GPIO. 
+	STR R0, [R1]
+;--------Configuración como I/O--------------------------
+	LDR R1, =GPIO_PORTB_DIR_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x20;  Output. Valor segun el numero del puerto.
+	STR R0, [R1]
+;--------Deshabilita las funciones alternativas----------	
+	LDR R1, =GPIO_PORTB_AFSEL_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x20;  Desabilita las demas funciones. 
+	STR R0, [R1]
+;--------Habilita el puerto como entrada y salida digital-
+	LDR R1, =GPIO_PORTB_DEN_R       
+    LDR R0, [R1]                    
+    ORR	 R0,#0x20;		Activa el puerto digital.    
+    STR R0, [R1]   
+
+;---------Puerto C5-------------------------	
+;--------Desactiva la función analógica------------------
+	LDR R1, =GPIO_PORTC_AMSEL_R;
+	LDR R0, [R1]	
+	BIC R0, R0, #0x20; Valor segun el numero del puerto. PB5
+	STR R0, [R1]
+;--------Permite deshabilitar las funciones alternativas-
+	LDR R1, =GPIO_PORTC_PCTL_R 
+	LDR R0, [R1]
+	LDR R2, =PCTL3
+	LDR R3,[R2]
+	BIC R0, R0, R3;  Configura el puerto como GPIO. 
+	STR R0, [R1]
+;--------Configuración como I/O--------------------------
+	LDR R1, =GPIO_PORTC_DIR_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x20;  Output. Valor segun el numero del puerto.
+	STR R0, [R1]
+;--------Deshabilita las funciones alternativas----------	
+	LDR R1, =GPIO_PORTC_AFSEL_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x20;  Desabilita las demas funciones. 
+	STR R0, [R1]
+;--------Habilita el puerto como entrada y salida digital-
+	LDR R1, =GPIO_PORTC_DEN_R       
+    LDR R0, [R1]                    
+    ORR	 R0,#0x20;		Activa el puerto digital.    
+    STR R0, [R1]
+	
+
+;---------Puerto D0-------------------------	
+;--------Desactiva la función analógica------------------
+	LDR R1, =GPIO_PORTD_AMSEL_R;
+	LDR R0, [R1]	
+	BIC R0, R0, #0x01; Valor segun el numero del puerto. PB5
+	STR R0, [R1]
+;--------Permite deshabilitar las funciones alternativas-
+	LDR R1, =GPIO_PORTD_PCTL_R 
+	LDR R0, [R1]
+	LDR R2, =PCTL4
+	LDR R3,[R2]
+	BIC R0, R0, R3;  Configura el puerto como GPIO. 
+	STR R0, [R1]
+;--------Configuración como I/O--------------------------
+	LDR R1, =GPIO_PORTD_DIR_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x01;  Output. Valor segun el numero del puerto.
+	STR R0, [R1]
+;--------Deshabilita las funciones alternativas----------	
+	LDR R1, =GPIO_PORTD_AFSEL_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x01;  Desabilita las demas funciones. 
+	STR R0, [R1]
+;--------Habilita el puerto como entrada y salida digital-
+	LDR R1, =GPIO_PORTD_DEN_R       
+    LDR R0, [R1]                    
+    ORR	 R0,#0x01;		Activa el puerto digital.    
+    STR R0, [R1]
+
+
+;-------------------Puerto E3 ---------------------------
+ ;--------Desactiva la función analógica-----------------
+   LDR R1, =GPIO_PORTE_AMSEL_R;
+   LDR R0, [R1]
+   BIC R0, R0, #0x08; Valor segun el numero del puerto. Se realiza la suma de los  valores en hexadecimal.
+    STR R0, [R1]
+     ;--------Permite deshabilitar las funciones alternativas
+   LDR R1, =GPIO_PORTE_PCTL_R
+   LDR R0, [R1]
+   LDR R2, =PCTL5
+   LDR R3,[R2]
+   BIC R0, R0, R3;  Configura el puerto como GPIO. 
+   STR R0, [R1]
+   ;--------Configuración como I/O-------------------------
+   LDR R1, =GPIO_PORTE_DIR_R
+   LDR R0, [R1]
+   BIC R0, R0, #0x08;  Output. Valor segun el numero del puerto.
+   STR R0, [R1]
+  ;--------Deshabilita las funciones alternativas---------
+   LDR R1, =GPIO_PORTE_AFSEL_R
+   LDR R0, [R1]
+   BIC R0, R0, #0x08;  Desabilita las demas funciones. 
+   STR R0, [R1]
+   ;--------Habilita el puerto como entrada y salida digital
+   LDR R1, =GPIO_PORTE_DEN_R
+   LDR R0, [R1]
+   ORR R0,#0x08; Activa el puerto digital.    
+   STR R0, [R1]
+
+
+;------------------ Puerto F---------------------------------
+	;--------Desactiva la función analógica------------------
+	LDR R1, =GPIO_PORTF_AMSEL_R;
+	LDR R0, [R1]
+	BIC R0, R0, #0x02; Valor segun el numero del puerto. 
+	STR R0, [R1]
+;--------Permite deshabilitar las funciones alternativas-
+	LDR R1, =GPIO_PORTF_PCTL_R 
+	LDR R0, [R1]
+	BIC R0, R0, #2_00000010;  Configura el puerto como GPIO. 
+	STR R0, [R1]
+;--------Configuración como I/O--------------------------
+	LDR R1, =GPIO_PORTF_DIR_R 
+	LDR R0, [R1]
+	ORR R0, R0, #0x02;  Output. Valor segun el numero del puerto.
+	STR R0, [R1]
+;--------Deshabilita las funciones alternativas----------	
+	LDR R1, =GPIO_PORTF_AFSEL_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x02;  Desabilita las demas funciones. 
+	STR R0, [R1]
+;--------Habilita el puerto como entrada y salida digital-
+	LDR R1, =GPIO_PORTF_DEN_R       
+    LDR R0, [R1]                    
+    ORR	 R0,#0x02;		Activa el puerto digital.    
+    STR R0, [R1]   
+;--------Salto, regresa a la linea posterior al salto BL---
+	BX LR
+      
+	
+;--------Lee el estado del puerto PB5----------------------	
+Lectura
+    LDR R1, =PA2      
+    LDR R0, [R1]      
+
+	
+;--------Ciclo de comparación--------------------------------
+Ciclo
+	CMP R0, #0x04; Boton pulsado                 
+    BEQ Activo                  
+    CMP R0, #0x00; Boton sin presionar                   
+    BEQ Apagado                                 
+    B   Lectura
+;--------Subrutina si el boton está pulsado------------------	
+Activo
+	LDR R1, =PF1
+	MOV R0, #0x02; Encender el bit.
+	STR R0, [R1];
+    B   Lectura
+;--------Subrutina si el boton no está pulsado------------------		
+Apagado
+	LDR R1, =PF1
+	MOV R0, #0x00; Apagar el bit.
+	STR R0, [R1];
+    B   Lectura
+
+
+    ALIGN                           
+    END 
