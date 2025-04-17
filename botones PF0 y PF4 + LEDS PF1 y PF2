@@ -1,0 +1,151 @@
+;Este codigo enciende los leds PF1 y/o PF2 cuando los botones PF0 y/o PF4 estàn presionados. Si PF0 se presiona, enciende PF1 (led rojo). Si PF4 se presiona, enciende PF2 (Led azul).
+;Si PF0 y PF4 se presionan, se enciende los leds PF1 y PF2 (rojo + azul = morado). Si nada se presiona, no se enciende ningùn led.
+;---------Reloj de la Tiva--------------------------------
+SYSCTL_RCGCGPIO_R 	   EQU 0x400FE608
+;---------Modo Analógico----------------------------------
+GPIO_PORTF_AMSEL_R     EQU 0x40025528;
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTF_PCTL_R      EQU 0x4002552C;
+;---------Especificación de dirección---------------------
+GPIO_PORTF_DIR_R      EQU   0x40025400;
+;---------Funciones Alternativas--------------------------
+GPIO_PORTF_AFSEL_R    EQU   0x40025420;
+;---------Habilita el modo digital------------------------
+GPIO_PORTF_DEN_R      EQU   0x4002551C;
+
+GPIO_PORTF_PUR_R   EQU 0x40025510 ; Deshabilita la resistencia pull up.
+GPIO_PORTF_LOCK_R  EQU 0x40025520 ; Desbloquea el puerto 
+GPIO_PORTF_CR_R    EQU 0x40025524 ; Permite modificar los registros
+GPIO_LOCK_KEY      EQU 0x4C4F434B ; Permite la modificación de los registros CR.
+	
+
+LEDS      EQU 0x40025038 ; Suma de todos los puertos
+Boton  EQU 0x40025044 ; Suma de todos los botones.
+
+	
+		AREA    |.text|, CODE, READONLY, ALIGN=2
+        THUMB
+        EXPORT  Start
+Start
+
+;habilita el reloj de la tiva para el puerto F
+  LDR R1, =SYSCTL_RCGCGPIO_R      
+    LDR R0, [R1]                   
+    ORR R0, R0, #0x20
+    STR R0, [R1]                    
+    NOP
+    NOP                            
+    
+	;Desbloquear y configurar el puerto F para permitir cambios en su configuracion
+    LDR R1, =GPIO_PORTF_LOCK_R      
+    LDR R0, =GPIO_LOCK_KEY   ; Clave mágica para desbloquear (0x4C4F434B)       
+    STR R0, [R1]                    
+   
+    LDR R1, =GPIO_PORTF_CR_R        
+    MOV R0, #0xFF    ; Permite modificaciones en los registros               
+    STR R0, [R1]                    
+    LDR R1, =GPIO_PORTF_DIR_R    ;A partir de aqui se configuran los pines PF0 Y PF4 como entradas   
+    LDR R0, [R1]                    
+    BIC R0, R0, #0x11      ;direcciòn    
+    STR R0, [R1]                    
+    
+    LDR R1, =GPIO_PORTF_AFSEL_R     
+    LDR R0, [R1]                   
+    BIC R0, R0, #0x11          
+    STR R0, [R1]                    
+    
+    LDR R1, =GPIO_PORTF_PUR_R       ;Resistencia Pull-Up: Activada
+    LDR R0, [R1]                    
+    ORR R0, R0, #0x11       ;Resistencia Pull-Up: Activada
+    STR R0, [R1]                   
+    LDR R1, =GPIO_PORTF_DEN_R     ;configuracion modo digital  
+    LDR R0, [R1]                    
+    ORR R0, R0, #0x11          ;configuracion modo digital
+    STR R0, [R1]                    
+    
+    LDR R1, =GPIO_PORTF_PCTL_R      
+    LDR R0, [R1]                    
+    BIC R0, R0, #2_00010001         
+   ; ADD R0, R0, #0x00000000         
+    STR R0, [R1]                    
+	
+   ;--------Desactiva la función analógica------------------
+	LDR R1, =GPIO_PORTF_AMSEL_R;
+	LDR R0, [R1]
+	BIC R0, R0, #0x0E; Valor segun el numero del puerto. 
+	STR R0, [R1]
+;--------Permite deshabilitar las funciones alternativas-
+	LDR R1, =GPIO_PORTF_PCTL_R 
+	LDR R0, [R1]
+	
+	BIC R0, R0, #2_00001110;  Configura el puerto como GPIO. 
+	 
+	
+	STR R0, [R1]
+;--------Configuración como I/O--------------------------
+	LDR R1, =GPIO_PORTF_DIR_R ;Configurados como salidas los pines PF1-PF3 
+	LDR R0, [R1]
+	ORR R0, R0, #0x0E;  Output. Valor segun el numero del puerto.
+	STR R0, [R1]
+	
+	LDR R1, =GPIO_PORTF_DIR_R 
+	LDR R0, [R1]
+	ORR R0, R0, #0x0E;  Output. Valor segun el numero del puerto.
+	STR R0, [R1]
+;--------Deshabilita las funciones alternativas----------	
+	LDR R1, =GPIO_PORTF_AFSEL_R 
+	LDR R0, [R1]
+	BIC R0, R0, #0x0E;  Desabilita las demas funciones. Para los leds PF1-PF3
+	STR R0, [R1]
+;--------Habilita el puerto como entrada y salida digital-
+	LDR R1, =GPIO_PORTF_DEN_R       ;habilita modo difital de los LEDS
+    LDR R0, [R1]                    
+    ORR	 R0,#0x0E;		Activa el puerto digital.    
+    STR R0, [R1]    
+	
+;Lectura de botones	
+Leer
+    LDR R1, =Boton              
+    LDR R0, [R1]                    
+ 
+ 
+loop
+    
+    CMP R0, #0x01       ;PF0 (bit 0): Valor 0x01         
+    BEQ B1                
+    CMP R0, #0x10   ;PF4 (bit 4): Valor 0x10                
+    BEQ B2                 
+    CMP R0, #0x00   ;nada presionado               
+    BEQ B1yB2                 
+    CMP R0, #0x11   ;PF0 y PF4 presionados              
+    BEQ Nada                
+                                    
+    STR R9, [R4]                   
+    B   loop
+B1 ;B1 (Botón PF0 presionado):
+	STR R0, [R1]                    
+    LDR R4, =LEDS                 
+    MOV R5, #0x02      ;Enciende LED Rojo (PF1)             
+    STR R5, [R4]       ;; Escribe en LEDs         
+    B Leer
+B2 ;B2 (Botón PF4 presionado):
+	STR R0, [R1]                    
+    LDR R4, =LEDS                 
+    MOV R5, #0x04  ; Enciende LED Azul (PF2)
+    STR R5, [R4]                    
+    B   Leer
+B1yB2 ;B1yB2 (Ambos botones presionados):
+    STR R0, [R1]                    
+    LDR R4, =LEDS                 
+    MOV R5, #0x06 ; Enciende LEDs Rojo + Azul = Morado (PF1 + PF2)
+    STR R5, [R4]                   
+    B   Leer
+Nada ;Nada (Ningún botón presionado):
+    STR R0, [R1]                    
+    LDR R4, =LEDS                 
+    MOV R5, #0x00 ;MOV R5, #0x00  ; Apaga todos los LEDs-
+    STR R5, [R4]                   
+    B   Leer
+
+    ALIGN                           
+    END
