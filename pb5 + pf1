@@ -2,7 +2,7 @@
 ;Puerto B (PB5): Se usa como entrada para leer un botón.
 ;Puerto F (PF1): Se usa como salida para controlar un LED (indicador visual).
 ;Conecta PB5 a una terminal del SW1 y la otra terminal a una resistencia aterrizada a 3.3V.
-;Si se presiona PB5, se enciende el led PF1, si se deja de presionar, se apaga el LED PF1 (INVERSO DEL CODIGO DE LA INGENIERA)
+;Si se presiona PB5, se apaga el led PF1, si se deja de presionar, se enciende el LED PF1 (INVERSO DEL CODIGO DE LA INGENIERA)
 
 ;---------Reloj de la Tiva--------------------------------
 SYSCTL_RCGCGPIO_R 	   EQU 0x400FE608
