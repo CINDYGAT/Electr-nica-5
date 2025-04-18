@@ -1,0 +1,7 @@
+--cpu=Cortex-M4.fp.sp
+".\objects\startup.o"
+".\objects\codigo.o"
+--strict --scatter ".\Objects\Practica 3.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list ".\Listings\Practica 3.map" -o ".\Objects\Practica 3.axf"
