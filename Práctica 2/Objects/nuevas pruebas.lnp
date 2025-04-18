@@ -1,0 +1,7 @@
+--cpu=Cortex-M4.fp.sp
+".\objects\startup.o"
+".\objects\pf1codigo.o"
+--strict --scatter ".\Objects\nuevas pruebas.sct"
+--entry=Start --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list ".\Listings\nuevas pruebas.map" -o ".\Objects\nuevas pruebas.axf"
