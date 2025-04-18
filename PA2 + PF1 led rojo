@@ -92,7 +92,7 @@ Configuracion
 ;--------Permite deshabilitar las funciones alternativas-
 	LDR R1, =GPIO_PORTF_PCTL_R 
 	LDR R0, [R1]
-	BIC R0, R0, #2_00000100;  Configura el puerto como GPIO. 
+	BIC R0, R0, #2_00000010;  Configura el puerto como GPIO. 
 	STR R0, [R1]
 ;--------Configuración como I/O--------------------------
 	LDR R1, =GPIO_PORTF_DIR_R 
