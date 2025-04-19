@@ -1,0 +1,232 @@
+;enciende led pe4 1 seg luego pf1 1 seg, mientras apaga el led verde
+;---------Reloj de la Tiva--------------------------------
+SYSCTL_RCGCGPIO_R 	   EQU 0x400FE608
+;---------PUERTO F----------------------------------------
+;---------Modo Analógico----------------------------------
+GPIO_PORTF_AMSEL_R     EQU 0x40025528;
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTF_PCTL_R      EQU 0x4002552C;
+;---------Especificación de dirección---------------------
+GPIO_PORTF_DIR_R      EQU   0x40025400;
+;---------Funciones Alternativas--------------------------
+GPIO_PORTF_AFSEL_R    EQU   0x40025420;
+;---------Habilita el modo digital------------------------
+GPIO_PORTF_DEN_R      EQU   0x4002551C;
+
+;---------PUERTO E----------------------------------------
+;---------Modo Analógico----------------------------------
+GPIO_PORTE_AMSEL_R     EQU 0x40024528;
+;---------Permite desactivarFuncion Alternativa-----------
+GPIO_PORTE_PCTL_R      EQU 0x4002452C;
+;---------Especificación de dirección---------------------
+GPIO_PORTE_DIR_R      EQU   0x40024400;
+;---------Funciones Alternativas--------------------------
+GPIO_PORTE_AFSEL_R    EQU   0x40024420;
+;---------Habilita el modo digital------------------------
+GPIO_PORTE_DEN_R      EQU   0x4002451C;
+
+;---------Dirección del puerto E-------------------
+GPIO_PORTE_DATA		EQU	0x400243FC;
+;---------Dirección del puerto F-------------------
+GPIO_PORTF_DATA		EQU 0x400253FC;	
+;--------------------------------------------------
+;---------Declaración de las variables para Timer--
+;--------------------------------------------------
+;---------Modulo de Timer--------------------------
+GPTM_RCGCTIMER_R			EQU 0x400FE604;
+;---------Configuración de registro----------------
+GPTM_TIMER0_CFG_R			EQU 0x40030000;
+;---------Registro de Control----------------------
+GPTM_TIMER0_CTL_R			EQU 0x4003000C;
+;---------Indica si será periodica la interrupción-
+GPTM_TIMER0_TIMAMODE_R		EQU 0x40030004;
+;---------Registro de interrupción-----------------
+GPTM_TIMER0_INTMASK_R		EQU 0x40030018;
+;---------Limpia la bandera del registro-----------
+GPTM_TIMER0_MICLR_R			EQU	0x40030024;
+;-----------Registro de interrupción--------------
+GPTM_TIMER0_RIS_R			EQU 0x4003001C;
+;-----------Carga el  valor inicial al timer-------
+GPTM_TIMER0_TIMAILR_R		EQU 0x40030028;
+
+Tiempo						EQU 40000000
+PCTL  EQU 2_00000010
+PCTL2 EQU 2_00001010
+
+        AREA    RESET, DATA, READONLY
+        EXPORT  __Vectors
+__Vectors
+        DCD     0x20004000  ; Stack pointer (ajusta según tu memoria)
+        DCD     Start       ; Reset vector (apunta a tu código de inicio)
+        
+        AREA    |.text|, CODE, READONLY, ALIGN=2
+        THUMB
+        EXPORT  Start
+
+Start	
+;-----------Subrutina de inicialización de puertos.-
+	BL Inicializarpuertos ;
+;-----------Subrutina de configuración del Timer----
+	BL ConfTimer
+;-----------Ciclo de espera de la interrupción------
+	B Ciclo
+	
+;CONFIGURACIÓN DE PUERTOS
+Inicializarpuertos
+
+;Se realizan las configuraciones necesarias para inicializar
+;los puertos normalmenete.
+
+;---------Se habilita el reloj para los puertos E y F-----
+	LDR R1, =SYSCTL_RCGCGPIO_R
+	LDR	R0, [R1]
+	ORR R0, R0, #0x30; Suma de 10+20 en hexadecimal es 30.
+	STR R0, [R1]
+	NOP
+	NOP
+	NOP
+
+;---------Se habilitará el puerto F para encender el led rojo.
+	LDR R1, =GPIO_PORTF_AMSEL_R;
+	LDR R0, [R1]
+	BIC R0, R0, #0x02; Valor segun el numero del puerto. Se realiza la suma de los  valores en hexadecimal.
+    STR R0, [R1]
+
+	  ;--------Permite deshabilitar las funciones alternativas
+    LDR R1, =GPIO_PORTF_PCTL_R
+	LDR R0, [R1]
+	MOV R3, #PCTL
+	BIC R0, R0, R3;  Configura el puerto como GPIO. 
+	STR R0, [R1]
+   ;--------Configuración como I/O-------------------------
+	LDR R1, =GPIO_PORTF_DIR_R
+	LDR R0, [R1]
+	ORR R0, R0, #0x02;  Output. Valor segun el numero del puerto.
+	STR R0, [R1]
+  ;--------Deshabilita las funciones alternativas---------
+	LDR R1, =GPIO_PORTF_AFSEL_R
+	LDR R0, [R1]
+	BIC R0, R0, #0x02;  Desabilita las demas funciones. 
+	STR R0, [R1]
+   ;--------Habilita el puerto como entrada y salida digital
+	LDR R1, =GPIO_PORTF_DEN_R
+	LDR R0, [R1]
+	ORR R0,#0x02; Activa el puerto digital.    
+	STR R0, [R1]
+
+
+;----------El puerto E se estará utilizando  como el detonante
+;----------de la interrupción.
+ ;--------Desactiva la función analógica-----------------
+	LDR R1, =GPIO_PORTE_AMSEL_R;
+	LDR R0, [R1]
+	BIC R0, R0, #0x10; Valor segun el numero del puerto. Se realiza la suma de los  valores en hexadecimal.
+	STR R0, [R1]
+     ;--------Permite deshabilitar las funciones alternativas
+	LDR R1, =GPIO_PORTF_PCTL_R
+	LDR R0, [R1]
+	LDR R2, =PCTL2
+	LDR R3,[R2]
+	BIC R0, R0, R3;  Configura el puerto como GPIO. 
+	STR R0, [R1]
+   ;--------Configuración como I/O-------------------------
+	LDR R1, =GPIO_PORTE_DIR_R
+	LDR R0, [R1]
+	ORR R0, R0, #0x10;  Output. Valor segun el numero del puerto.
+	STR R0, [R1]
+  ;--------Deshabilita las funciones alternativas---------
+	LDR R1, =GPIO_PORTE_AFSEL_R
+	LDR R0, [R1]
+	BIC R0, R0, #0x10;  Desabilita las demas funciones. 
+	STR R0, [R1]
+   ;--------Habilita el puerto como entrada y salida digital
+	LDR R1, =GPIO_PORTE_DEN_R
+	LDR R0, [R1]
+	ORR R0,#0x10; Activa el puerto digital.    
+	STR R0, [R1]
+
+
+		BX	LR
+
+ConfTimer
+;--------Se activa el modulo del Timer--------------
+	LDR R1, =GPTM_RCGCTIMER_R
+	LDR R0, [R1]
+	ORR R0, R0, #0x1
+	STR R0, [R1]
+;--------Permite configurar el timer---------------
+	LDR R1, =GPTM_TIMER0_CFG_R
+	MOV R0, #0x00
+	STR R0, [R1]
+;--------Se establece la función periódica---------
+	LDR R1, =GPTM_TIMER0_TIMAMODE_R
+	MOV R0, #0x2
+	STR R0, [R1]
+;--------Carga el vamor del timer------------------
+	LDR R1, =GPTM_TIMER0_TIMAILR_R
+	LDR R2, =Tiempo
+	STR R2, [R1]	
+;--------Permite que se activen/desactiven las interrupciones.
+	LDR R1, =GPTM_TIMER0_INTMASK_R
+	LDR R0, [R1]
+	ORR R0, R0, #0x1
+	STR R0, [R1]
+;--------Registro de control que inicia el conteo-------
+	LDR R1, =GPTM_TIMER0_CTL_R
+	LDR R0, [R1]
+	ORR R0,R0, #0x1
+	STR R0, [R1]
+;---------Valores del puerto E---------------------	
+	LDR R1, =GPIO_PORTE_DATA
+	MOV R0, #0x10
+	STR R0, [R1]
+	
+	BX LR
+	
+	
+	
+Ciclo
+;---------Realiza una interrupcion si se ha realizado otra interrupcion---------
+	LDR R1, =GPTM_TIMER0_RIS_R
+	LDR R0, [R1]
+	CMP R0, #0x1
+	BEQ	LedE4
+	B Ciclo
+
+LedE4
+;--------------Enciende el led E4---------------
+	LDR R1, =GPIO_PORTE_DATA
+	LDR R0, [R1]
+	CMP R0, #0x10
+	BEQ LedF1
+	MOV R0, #0x10
+	STR R0, [R1]	
+;---------Apaga Led F1-----------------------------
+	LDR R1, =GPIO_PORTF_DATA
+	MOV R0, #0x0
+	STR R0, [R1]
+;---------Limpia el contador interno del timer-------
+	LDR R1, =GPTM_TIMER0_MICLR_R
+	LDR R0, [R1]
+	ORR R0, R0, #0x1
+	STR R0, [R1]
+	B	Ciclo
+
+;------Se enciende el LED F1 y se apaga el LED E4--
+LedF1	
+;---------Apaga Led E4-----------------------------
+	LDR R1, =GPIO_PORTE_DATA
+	MOV R0, #0x0
+	STR R0, [R1]		
+;---------Enciende Led F1--------------------------
+	LDR R1, =GPIO_PORTF_DATA
+	MOV R0, #0x2
+	STR R0, [R1]
+;---------Limpia el contador interno del timer-------
+	LDR R1, =GPTM_TIMER0_MICLR_R
+	LDR R0, [R1]
+	ORR R0, R0, #0x01
+	STR R0, [R1]
+	B	Ciclo
+	ALIGN
+	END
