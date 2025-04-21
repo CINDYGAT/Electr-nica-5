@@ -15,8 +15,8 @@ Tiempo EQU 4000000
     AREA    RESET, DATA, READONLY
     EXPORT  __Vectors
 __Vectors
-    DCD     0x20004000  ; Stack pointer (ajusta según tu memoria)
-    DCD     Start       ; Reset vector (apunta a tu código de inicio)
+    DCD     0x20004000  ; Stack pointer (ajusta segÃºn tu memoria)
+    DCD     Start       ; Reset vector (apunta a tu cÃ³digo de inicio)
         
     AREA    |.text|, CODE, READONLY, ALIGN=2
     THUMB
@@ -37,7 +37,7 @@ Ciclo
     B   Ciclo 
  
 CambiarEstado 
-    ; Limpia bandera de interrupción 
+    ; Limpia bandera de interrupciÃ³n 
     LDR R1, =GPTM_TIMER0_ICR_R 
     MOV R0, #0x1 
     STR R0, [R1] 
@@ -56,12 +56,9 @@ CambiarEstado
     B   Ciclo 
  
 ;------Estados------ 
-Estado0  ; PE4  
+Estado0  ; PE0  
     LDR R1, =GPIO_PORTE_DATA 
-    MOV R0, #0x10 
-    STR R0, [R1] 
-    LDR R1, =GPIO_PORTF_DATA 
-    MOV R0, #0x00  ; Apaga PF1 
+    MOV R0, #0x01 ;PE0 
     STR R0, [R1] 
     ADD R5, R5, #1 
     B   Ciclo 
@@ -81,17 +78,14 @@ Estado2  ; PE2 encendido
     ADD R5, R5, #1 
     B   Ciclo 
  
-Estado3  ; PF1 encendido 
+Estado3  ; PE3 encendido 
     LDR R1, =GPIO_PORTE_DATA 
-    MOV R0, #0x00  ; Apaga todos los PE 
-    STR R0, [R1] 
-    LDR R1, =GPIO_PORTF_DATA 
-    MOV R0, #0x02  ; Enciende PF1 
+    MOV R0, #0x08  ; PE3 
     STR R0, [R1] 
     ADD R5, R5, #1 
     B   Ciclo 
  
-;------Configuración del Timer------ 
+;------ConfiguraciÃ³n del Timer------ 
 ConfTimer 
     ; Habilita reloj del Timer0 
     LDR R1, =GPTM_RCGCTIMER_R 
