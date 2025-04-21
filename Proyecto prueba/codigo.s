@@ -49,7 +49,9 @@ CambiarEstado
     CMP R5, #2 
     BEQ Estado2 
     CMP R5, #3 
-    BEQ Estado3 
+    BEQ Estado3
+	CMP R5, #4
+	BEQ Estado4
  
     ; Reinicia contador 
     MOV R5, #0 
@@ -81,6 +83,13 @@ Estado2  ; PE2 encendido
 Estado3  ; PE3 encendido 
     LDR R1, =GPIO_PORTE_DATA 
     MOV R0, #0x08  ; PE3 
+    STR R0, [R1] 
+    ADD R5, R5, #1 
+    B   Ciclo 
+
+Estado4  ; PE4 encendido 
+    LDR R1, =GPIO_PORTE_DATA 
+    MOV R0, #0x10  ; PE4 
     STR R0, [R1] 
     ADD R5, R5, #1 
     B   Ciclo 
