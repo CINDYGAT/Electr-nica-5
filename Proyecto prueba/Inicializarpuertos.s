@@ -1,128 +1,91 @@
- ;---------Direcciones de registros------------------------ 
-GPIO_PORTE_DATA  EQU 0x400243FC 
-GPIO_PORTF_DATA  EQU 0x400253FC 
-GPTM_RCGCTIMER_R EQU 0x400FE604 
-GPTM_TIMER0_CFG_R EQU 0x40030000 
-GPTM_TIMER0_CTL_R EQU 0x4003000C 
-GPTM_TIMER0_TAMR_R EQU 0x40030004 
-GPTM_TIMER0_IMR_R EQU 0x40030018 
-GPTM_TIMER0_ICR_R EQU 0x40030024 
-GPTM_TIMER0_RIS_R EQU 0x4003001C 
-GPTM_TIMER0_TAILR_R EQU 0x40030028 
+;---------Reloj de la Tiva-------------------------------- 
+SYSCTL_RCGCGPIO_R     EQU 0x400FE608 
+;---------PUERTO F---------------------------------------- 
+GPIO_PORTF_AMSEL_R     EQU 0x40025528 
+GPIO_PORTF_PCTL_R      EQU 0x4002552C 
+GPIO_PORTF_DIR_R       EQU 0x40025400 
+GPIO_PORTF_AFSEL_R     EQU 0x40025420 
+GPIO_PORTF_DEN_R       EQU 0x4002551C 
+;---------PUERTO E---------------------------------------- 
+GPIO_PORTE_AMSEL_R     EQU 0x40024528 
+GPIO_PORTE_PCTL_R      EQU 0x4002452C 
+GPIO_PORTE_DIR_R       EQU 0x40024400 
+GPIO_PORTE_AFSEL_R     EQU 0x40024420 
+GPIO_PORTE_DEN_R       EQU 0x4002451C 
  
-Tiempo EQU 4000000   
+;PCTL  EQU 0x00000002  ; Configuración para PF1 
+PCTL2 EQU 0x00011001  ; Configuración para PE4 
  
-    AREA    RESET, DATA, READONLY
-    EXPORT  __Vectors
-__Vectors
-    DCD     0x20004000  ; Stack pointer (ajusta según tu memoria)
-    DCD     Start       ; Reset vector (apunta a tu código de inicio)
-        
-    AREA    |.text|, CODE, READONLY, ALIGN=2
-    THUMB
-    EXPORT  Start
-    IMPORT  Inicializarpuertos 
+    AREA    |.text|, CODE, READONLY, ALIGN=2 
+    THUMB 
+    EXPORT  Inicializarpuertos 
  
-Start 
-    BL  Inicializarpuertos  ; Configura puertos 
-    BL  ConfTimer           ; Configura Timer0 
-    MOV R5, #0              ; Inicializa contador de estados 
- 
- 
-Ciclo 
-    LDR R1, =GPTM_TIMER0_RIS_R 
+Inicializarpuertos 
+;---------Habilita reloj para puertos E y F--------------- 
+    LDR R1, =SYSCTL_RCGCGPIO_R 
     LDR R0, [R1] 
-    CMP R0, #0x1 
-    BEQ CambiarEstado 
-    B   Ciclo 
- 
-CambiarEstado 
-    ; Limpia bandera de interrupción 
-    LDR R1, =GPTM_TIMER0_ICR_R 
-    MOV R0, #0x1 
+    ORR R0, R0, #0x30  ; Habilita E (0x20) y F (0x10) 
     STR R0, [R1] 
+    NOP 
+    NOP 
+    NOP 
  
-    CMP R5, #0 
-    BEQ Estado0 
-    CMP R5, #1 
-    BEQ Estado1 
-    CMP R5, #2 
-    BEQ Estado2 
-    CMP R5, #3 
-    BEQ Estado3
-	CMP R5, #4
-	BEQ Estado4
- 
-    ; Reinicia contador 
-    MOV R5, #0 
-    B   Ciclo 
- 
-;------Estados------ 
-Estado0  ; PE0  
-    LDR R1, =GPIO_PORTE_DATA 
-    MOV R0, #0x01 ;PE0 
-    STR R0, [R1] 
-    ADD R5, R5, #1 
-    B   Ciclo 
- 
-Estado1  ; PE1 encendido 
-    LDR R1, =GPIO_PORTE_DATA 
-    MOV R0, #0x02  ; PE1 
-    STR R0, [R1] 
-    ADD R5, R5, #1 
-    B   Ciclo 
- 
-Estado2  ; PE2 encendido 
- 
-    LDR R1, =GPIO_PORTE_DATA 
-    MOV R0, #0x04  ; PE2 
-    STR R0, [R1] 
-    ADD R5, R5, #1 
-    B   Ciclo 
- 
-Estado3  ; PE3 encendido 
-    LDR R1, =GPIO_PORTE_DATA 
-    MOV R0, #0x08  ; PE3 
-    STR R0, [R1] 
-    ADD R5, R5, #1 
-    B   Ciclo 
-
-Estado4  ; PE4 encendido 
-    LDR R1, =GPIO_PORTE_DATA 
-    MOV R0, #0x10  ; PE4 
-    STR R0, [R1] 
-    ADD R5, R5, #1 
-    B   Ciclo 
- 
-;------Configuración del Timer------ 
-ConfTimer 
-    ; Habilita reloj del Timer0 
-    LDR R1, =GPTM_RCGCTIMER_R 
+;---------Configuración del Puerto F (PF1)---------------- 
+    ; Desactiva modo analógico 
+    LDR R1, =GPIO_PORTF_AMSEL_R 
     LDR R0, [R1] 
-    ORR R0, R0, #0x1 
-    STR R0, [R1] 
-     
-    LDR R1, =GPTM_TIMER0_CFG_R 
-    MOV R0, #0x00 
-    STR R0, [R1] 
-     
-    LDR R1, =GPTM_TIMER0_TAMR_R 
-    MOV R0, #0x02 
-    STR R0, [R1] 
-     
-    LDR R1, =GPTM_TIMER0_TAILR_R 
-    LDR R0, =Tiempo 
-    STR R0, [R1] 
-    
-    LDR R1, =GPTM_TIMER0_IMR_R 
-    MOV R0, #0x01 
-    STR R0, [R1] 
-    
-    LDR R1, =GPTM_TIMER0_CTL_R 
-    MOV R0, #0x01 
-    STR R0, [R1] 
-    BX  LR 
+    BIC R0, R0, #0x02  ; PF1 
  
+    STR R0, [R1] 
+    ; Configura como GPIO 
+    LDR R1, =GPIO_PORTF_PCTL_R 
+    LDR R0, [R1] 
+    BIC R0, R0, #0x000000F0   
+    STR R0, [R1] 
+     
+    LDR R1, =GPIO_PORTF_DIR_R 
+    LDR R0, [R1] 
+    ORR R0, R0, #0x02  ; PF1 como salida 
+    STR R0, [R1] 
+   ;--------Deshabilita las funciones alternativas--------- 
+ LDR R1, =GPIO_PORTF_AFSEL_R 
+ LDR R0, [R1] 
+ BIC R0, R0, #0x02;  Desabilita las demas funciones.  
+ STR R0, [R1] 
+    ; Habilita digital 
+    LDR R1, =GPIO_PORTF_DEN_R 
+    LDR R0, [R1] 
+    ORR R0, R0, #0x02  ; Habilita PF1 
+    STR R0, [R1] 
  
+;---------Configuración del Puerto E (PE0, PE1, PE2, PE3)-- 
+    ; Desactiva modo analógico 
+    LDR R1, =GPIO_PORTE_AMSEL_R 
+    LDR R0, [R1] 
+    BIC R0, R0, #0x1F  ;  
+    STR R0, [R1] 
+     
+    LDR R1, =GPIO_PORTE_PCTL_R 
+    LDR R0, [R1] 
+    BIC R0, R0, #0x000F000F   
+    STR R0, [R1] 
+   
+    LDR R1, =GPIO_PORTE_DIR_R 
+    LDR R0, [R1] 
+    ORR R0, R0, #0x1F   
+    STR R0, [R1] 
+   ;--------Deshabilita las funciones alternativas--------- 
+ LDR R1, =GPIO_PORTE_AFSEL_R 
+ LDR R0, [R1] 
+ BIC R0, R0, #0x1F  
+ STR R0, [R1] 
+    ; Habilita digital 
+    LDR R1, =GPIO_PORTE_DEN_R 
+ 
+    LDR R0, [R1] 
+    ORR R0, R0, #0x1F   
+    STR R0, [R1] 
+ 
+    BX  LR   
     ALIGN 
-    END
+    END 
