@@ -13,8 +13,8 @@ GPIO_PORTE_DIR_R       EQU 0x40024400
 GPIO_PORTE_AFSEL_R     EQU 0x40024420 
 GPIO_PORTE_DEN_R       EQU 0x4002451C 
  
-PCTL  EQU 0x00000002  ; Configuraci髇 para PF1 
-PCTL2 EQU 0x00000010  ; Configuraci髇 para PE4 
+;PCTL  EQU 0x00000002  ; Configuraci贸n para PF1 
+PCTL2 EQU 0x00001111  ; Configuraci贸n para PE4 
  
     AREA    |.text|, CODE, READONLY, ALIGN=2 
     THUMB 
@@ -30,8 +30,8 @@ Inicializarpuertos
     NOP 
     NOP 
  
-;---------Configuraci髇 del Puerto F (PF1)---------------- 
-    ; Desactiva modo anal骻ico 
+;---------Configuraci贸n del Puerto F (PF1)---------------- 
+    ; Desactiva modo anal贸gico 
     LDR R1, =GPIO_PORTF_AMSEL_R 
     LDR R0, [R1] 
     BIC R0, R0, #0x02  ; PF1 
@@ -58,11 +58,11 @@ Inicializarpuertos
     ORR R0, R0, #0x02  ; Habilita PF1 
     STR R0, [R1] 
  
-;---------Configuraci髇 del Puerto E (PE4, PE1, PE2)-- 
-    ; Desactiva modo anal骻ico 
+;---------Configuraci贸n del Puerto E (PE0, PE1, PE2, PE3)-- 
+    ; Desactiva modo anal贸gico 
     LDR R1, =GPIO_PORTE_AMSEL_R 
     LDR R0, [R1] 
-    BIC R0, R0, #0x17  ;  
+    BIC R0, R0, #0x0F  ;  
     STR R0, [R1] 
      
     LDR R1, =GPIO_PORTE_PCTL_R 
@@ -72,18 +72,18 @@ Inicializarpuertos
    
     LDR R1, =GPIO_PORTE_DIR_R 
     LDR R0, [R1] 
-    ORR R0, R0, #0x17   
+    ORR R0, R0, #0x0F   
     STR R0, [R1] 
    ;--------Deshabilita las funciones alternativas--------- 
  LDR R1, =GPIO_PORTE_AFSEL_R 
  LDR R0, [R1] 
- BIC R0, R0, #0x17  
+ BIC R0, R0, #0x0F  
  STR R0, [R1] 
     ; Habilita digital 
     LDR R1, =GPIO_PORTE_DEN_R 
  
     LDR R0, [R1] 
-    ORR R0, R0, #0x17   
+    ORR R0, R0, #0x0F   
     STR R0, [R1] 
  
     BX  LR   
