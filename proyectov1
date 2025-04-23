@@ -60,31 +60,17 @@ CambiarEstado
 ;    BEQ ManejarNivel5
     B   Ciclo 
     
-	;CMP R5, #0 
-    ;BEQ Estado0 
-    ;CMP R5, #1 
-    ;BEQ Estado1 
-    ;CMP R5, #2 
-    ;BEQ Estado2 
-    ;CMP R5, #3 
-    ;BEQ Estado3
-	;CMP R5, #4
-	;BEQ Estado4
-	
+
 	; ------ Manejo de Niveles ------
 ManejarNivel1
-    ; Solo Estado 0
-    ;CMP R5, #0
-    ;BEQ Estado0
-    ;MOV R5, #0             ; Reinicia contador
-    ;B   Ciclo
-	
 	; Solo Estado 0 (PE0)
     LDR R1, =GPIO_PORTE_DATA 
     MOV R0, #0x01 ; PE0 
     STR R0, [R1] 
-    ;B   BotonNivelUno
-	B EsperarSuelto
+    ;En esta parte posiblemente agregue un delay
+	MOV R2, #0xFFFF       ; Valor de delay
+	B DelayTransicion
+	;B EsperarSuelto
 	
 ManejarNivel2
     ; Estados 0 y 1
@@ -93,7 +79,7 @@ ManejarNivel2
     CMP R5, #1
     BEQ Estado1
 	B   EsperarSuelto
-    MOV R5, #0
+    ;MOV R5, #0
 	;B   EsperarSuelto
     B   Ciclo
  
@@ -140,14 +126,14 @@ Estado4  ; PE4 encendido
     ADD R5, R5, #1 
     B   Ciclo 
 	
-;BotonNivelUno
-;	LDR R1, =GPIO_PORTE_DATA 
-;    MOV R0, #0x00       ; Apagar PE3 (opcional)
-;	MOV R2, #0xFF00 ;un delay para que no se apague al instante
-;    STR R0, [R1]
-;    B EsperarSuelto
-    
+  
 EsperarSuelto
+	;Apaga los LEDS porque solo se queria mostrar la secuencia
+	LDR R1, =GPIO_PORTE_DATA 
+    MOV R0, #0x00       ; Apagar PE3 (opcional)
+    STR R0, [R1]
+	
+	;Verifica si esta suelto para luego presionarlo
 	LDR R1, =PA2
     LDR R0, [R1]
     AND R0, R0, #0x04   ; Aislar PA2
@@ -173,16 +159,18 @@ DelayRebote
     
     ; Verificar que sigue presionado después del rebote
     LDR R0, [R1]
-    AND R0, R0, #0x04
+    AND R0, R0, #0x04 ;REVISAR ESTO PORQUE NO HACE NADA INDEPENDIENTE DE SI APACHO O NO
     BNE EsperarSuelto      ; Si fue rebote, volver a empezar
-    
+   
     ; Botón presionado confirmado - cambiar de nivel
-	LDR R1, =GPIO_PORTE_DATA 
-    MOV R0, #0x00       ; Apagar PE3 (opcional)
-    STR R0, [R1]
-    ADD R6, R6, #1
+	ADD R6, R6, #1
 	MOV R5, #0
     B Ciclo
+
+DelayTransicion
+	SUBS R2, R2, #1
+	BNE DelayTransicion
+	B EsperarSuelto
  
 ;------Configuración del Timer------ 
 ConfTimer 
