@@ -61,32 +61,23 @@ CambiarEstado
     B   Ciclo 
     
 
-	; ------ Manejo de Niveles ------
+	; ------ Manejo de niveles ------
 ManejarNivel1
 	; Solo Estado 0 (PE0)
     LDR R1, =GPIO_PORTE_DATA 
     MOV R0, #0x01 ; PE0 
     STR R0, [R1] 
-    ;En esta parte posiblemente agregue un delay
-	MOV R2, #0xFFFF       ; Valor de delay
-	B DelayTransicion
-	;B EsperarSuelto
-	
+	B EsperarTimerNivel1
+
 ManejarNivel2
     ; Estados 0 y 1
     CMP R5, #0
     BEQ Estado0
     CMP R5, #1
     BEQ Estado1
-	B   EsperarSuelto
-    ;MOV R5, #0
-	;B   EsperarSuelto
+	B   EsperarTimerNivel1
     B   Ciclo
- 
-    ; Reinicia contador 
-    MOV R5, #0 
-    B   Ciclo 
- 
+
 ;------Estados------ 
 Estado0  ; PE0  
     LDR R1, =GPIO_PORTE_DATA 
@@ -126,13 +117,11 @@ Estado4  ; PE4 encendido
     ADD R5, R5, #1 
     B   Ciclo 
 	
-  
+;------------------------ Logica de tiempos ---------------------------------------------
+
+
+;----------------------------- Logica de Botones --------------------------
 EsperarSuelto
-	;Apaga los LEDS porque solo se queria mostrar la secuencia
-	LDR R1, =GPIO_PORTE_DATA 
-    MOV R0, #0x00       ; Apagar PE3 (opcional)
-    STR R0, [R1]
-	
 	;Verifica si esta suelto para luego presionarlo
 	LDR R1, =PA2
     LDR R0, [R1]
@@ -167,10 +156,27 @@ DelayRebote
 	MOV R5, #0
     B Ciclo
 
-DelayTransicion
-	SUBS R2, R2, #1
-	BNE DelayTransicion
-	B EsperarSuelto
+;-------------------------------------------------------------------------------------------------------------
+;----------------------------------- Control de tiempo para apagar leds --------------------------------------
+    ; Esperar interrupción del timer (igual que Nivel 2)
+EsperarTimerNivel1
+    LDR R1, =GPTM_TIMER0_RIS_R
+    LDR R0, [R1]
+    CMP R0, #0x1
+    BEQ ApagarPE0  ; Cuando el timer genera interrupción, apagar el LED
+    B EsperarTimerNivel1
+
+ApagarPE0
+    LDR R1, =GPTM_TIMER0_ICR_R
+    MOV R0, #0x1
+    STR R0, [R1]   ; Limpiar interrupción
+
+    LDR R1, =GPIO_PORTE_DATA 
+    MOV R0, #0x00   ; Apagar PE0
+    STR R0, [R1]  
+
+    B EsperarSuelto
+
  
 ;------Configuración del Timer------ 
 ConfTimer 
