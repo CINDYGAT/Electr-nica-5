@@ -52,12 +52,12 @@ CambiarEstado
     BEQ ManejarNivel1
     CMP R6, #2
     BEQ ManejarNivel2
-;    CMP R6, #3
-;    BEQ ManejarNivel3
-;    CMP R6, #4
-;    BEQ ManejarNivel4
-;    CMP R6, #5
-;    BEQ ManejarNivel5
+    CMP R6, #3
+    BEQ ManejarNivel3
+    CMP R6, #4
+    BEQ ManejarNivel4
+    CMP R6, #5
+    BEQ ManejarNivel5
     B   Ciclo 
     
 
@@ -78,21 +78,57 @@ ManejarNivel2
 	B   EsperarTimerApagar
     B   Ciclo
 
+ManejarNivel3
+    ; Estados 0 y 1
+    CMP R5, #0
+    BEQ Estado0
+    CMP R5, #1
+    BEQ Estado1
+	CMP R5, #2
+	BEQ Estado2
+	B   EsperarTimerApagar
+    B   Ciclo
+
+ManejarNivel4
+    ; Estados 0 y 1
+    CMP R5, #0
+    BEQ Estado0
+    CMP R5, #1
+    BEQ Estado1
+	CMP R5, #2
+	BEQ Estado2
+	CMP R5, #3
+	BEQ Estado3
+	B   EsperarTimerApagar
+    B   Ciclo
+	
+ManejarNivel5
+    ; Estados 0 y 1
+    CMP R5, #0
+    BEQ Estado0
+    CMP R5, #1
+    BEQ Estado1
+	CMP R5, #2
+	BEQ Estado2
+	CMP R5, #3
+	BEQ Estado3
+	CMP R5, #4
+	BEQ Estado4
+	B   EsperarTimerApagar
+    B   Ciclo
 ;------Estados------ 
 Estado0  ; PE0  
     LDR R1, =GPIO_PORTE_DATA 
     MOV R0, #0x01 ;PE0 
     STR R0, [R1] 
     ADD R5, R5, #1 
-	;B   BotonNivelUno
     B   Ciclo 
  
 Estado1  ; PE1 encendido 
     LDR R1, =GPIO_PORTE_DATA 
     MOV R0, #0x02  ; PE1 
+	STR R0, [R1] 
 	ADD R5, R5, #1
-    STR R0, [R1] 
-    ;MOV R5, #0 
     B   Ciclo 
  
 Estado2  ; PE2 encendido 
@@ -118,16 +154,16 @@ Estado4  ; PE4 encendido
     B   Ciclo 
 	
 ;-------------------------------------------------------------------------------------------------------------
-;----------------------------------- Control de tiempo para apagar leds --------------------------------------
-    ; Esperar interrupción del timer (igual que Nivel 2)
+;----------------------------------- Acabar la cuenta del timer anterior y empezar una nueva --------------------------------------
+    ; Esperar interrupción del timer para verificar temporizador
 EsperarTimerApagar
-    LDR R1, =GPTM_TIMER0_RIS_R
+    LDR R1, =GPTM_TIMER0_RIS_R ;termino la cuenta anterior
     LDR R0, [R1]
     CMP R0, #0x1
     BNE EsperarTimerApagar
 	
 	;Limpia la interrupcion y apaga los LEDS
-    LDR R1, =GPTM_TIMER0_ICR_R
+    LDR R1, =GPTM_TIMER0_ICR_R ;resetear para empezar una nueva cuenta
     MOV R0, #0x1
     STR R0, [R1]   ; Limpiar interrupción
 
@@ -140,13 +176,13 @@ EsperarTimerApagar
 ;-------------------------------------------------------------------------------------------------------------
 ;----------------------------- Logica de Botones -------------------------------------------------------------
 EsperarSuelto
-	LDR R1, =GPTM_TIMER0_RIS_R
+	LDR R1, =GPTM_TIMER0_RIS_R ;se acabo la cuenta anterior, momento de iniciar una nueva
     LDR R0, [R1]
     CMP R0, #0x1
     BNE EsperarSuelto
 	
 	;Limpia la interrupcion y apaga los LEDS
-    LDR R1, =GPTM_TIMER0_ICR_R
+    LDR R1, =GPTM_TIMER0_ICR_R ;se reinicia la cuenta para este proce
     MOV R0, #0x1
     STR R0, [R1]   ; Limpiar interrupción
 	
@@ -177,9 +213,9 @@ EsperarPresionado
 	CMP R7,#0x04
     BEQ EsperarPresionado ; Mientras no esté presionado (1), seguir esperando
     
-    ; Anti-rebote opcional (recomendado)
+    ; Anti-rebote, se asegura que el boton este presionado un cierto tiempo y no sea un falso contacto o falsa lectura
     MOV R2, #50       ; Valor de delay
-	
+
 DelayRebote
     SUBS R2, R2, #1
     BNE DelayRebote
@@ -187,10 +223,17 @@ DelayRebote
     ; Verificar que sigue presionado después del rebote
     LDR R7, [R4]
 	AND R7, R7, #0x04
-    CMP R7, #0x04 ;REVISAR ESTO PORQUE NO HACE NADA INDEPENDIENTE DE SI APACHO O NO
+    CMP R7, #0x04 ;revisa que el boton siga presionado unos segundos y no existan falsas lecturas. Si no esta presionado, vuelve a iniciar.
     BEQ EsperarSuelto      ; Si fue rebote, volver a empezar
-   
-    ; Botón presionado confirmado - cambiar de nivel
+	
+EsperarSoltarBoton
+	;Lee el estado del boton y espera hasta que el usuario lo suelte para continuar al siguiente nivel. No reinicio RIC e ICR xq no se modifica R1
+	LDR R7, [R4]
+    AND R7, R7, #0x04
+	CMP R7,#0x00
+    BEQ EsperarSoltarBoton
+	
+    ; Botón soltado confirmado - cambiar de nivel
 	ADD R6, R6, #1
 	MOV R5, #0
     B Ciclo
