@@ -67,7 +67,7 @@ ManejarNivel1
     LDR R1, =GPIO_PORTE_DATA 
     MOV R0, #0x01 ; PE0 
     STR R0, [R1] 
-	B EsperarTimerNivel1
+	B EsperarTimerApagar
 
 ManejarNivel2
     ; Estados 0 y 1
@@ -75,7 +75,7 @@ ManejarNivel2
     BEQ Estado0
     CMP R5, #1
     BEQ Estado1
-	B   EsperarTimerNivel1
+	B   EsperarTimerApagar
     B   Ciclo
 
 ;------Estados------ 
@@ -117,26 +117,64 @@ Estado4  ; PE4 encendido
     ADD R5, R5, #1 
     B   Ciclo 
 	
-;------------------------ Logica de tiempos ---------------------------------------------
-
-
-;----------------------------- Logica de Botones --------------------------
-EsperarSuelto
-	;Verifica si esta suelto para luego presionarlo
-	LDR R1, =PA2
+;-------------------------------------------------------------------------------------------------------------
+;----------------------------------- Control de tiempo para apagar leds --------------------------------------
+    ; Esperar interrupción del timer (igual que Nivel 2)
+EsperarTimerApagar
+    LDR R1, =GPTM_TIMER0_RIS_R
     LDR R0, [R1]
-    AND R0, R0, #0x04   ; Aislar PA2
-	CMP R0,#0x00
+    CMP R0, #0x1
+    BNE EsperarTimerApagar
+	
+	;Limpia la interrupcion y apaga los LEDS
+    LDR R1, =GPTM_TIMER0_ICR_R
+    MOV R0, #0x1
+    STR R0, [R1]   ; Limpiar interrupción
+
+    LDR R1, =GPIO_PORTE_DATA 
+    MOV R0, #0x00   ; Apagar PE0
+    STR R0, [R1]  
+
+    B EsperarSuelto
+
+;-------------------------------------------------------------------------------------------------------------
+;----------------------------- Logica de Botones -------------------------------------------------------------
+EsperarSuelto
+	LDR R1, =GPTM_TIMER0_RIS_R
+    LDR R0, [R1]
+    CMP R0, #0x1
+    BNE EsperarSuelto
+	
+	;Limpia la interrupcion y apaga los LEDS
+    LDR R1, =GPTM_TIMER0_ICR_R
+    MOV R0, #0x1
+    STR R0, [R1]   ; Limpiar interrupción
+	
+	;Verifica si esta suelto para luego presionarlo
+	LDR R4, =PA2
+    LDR R7, [R4]
+    AND R7, R7, #0x04   ; Aislar PA2
+	CMP R7,#0x00
     BEQ EsperarSuelto     ; Mientras esté presionado (0), seguir esperando
 	B EsperarPresionado
 	
     
     ; Esperar a que el botón SEA presionado
 EsperarPresionado
-	;LDR R1, =PA2
+	LDR R1, =GPTM_TIMER0_RIS_R
     LDR R0, [R1]
-    AND R0, R0, #0x04
-	CMP R0,#0x04
+    CMP R0, #0x1
+    BNE EsperarPresionado
+	
+	;Limpia la interrupcion y apaga los LEDS
+    LDR R1, =GPTM_TIMER0_ICR_R
+    MOV R0, #0x1
+    STR R0, [R1]   ; Limpiar interrupción
+	
+	;LDR R1, =PA2
+    LDR R7, [R4]
+    AND R7, R7, #0x04
+	CMP R7,#0x04
     BEQ EsperarPresionado ; Mientras no esté presionado (1), seguir esperando
     
     ; Anti-rebote opcional (recomendado)
@@ -147,35 +185,16 @@ DelayRebote
     BNE DelayRebote
     
     ; Verificar que sigue presionado después del rebote
-    LDR R0, [R1]
-    AND R0, R0, #0x04 ;REVISAR ESTO PORQUE NO HACE NADA INDEPENDIENTE DE SI APACHO O NO
-    BNE EsperarSuelto      ; Si fue rebote, volver a empezar
+    LDR R7, [R4]
+	AND R7, R7, #0x04
+    CMP R7, #0x04 ;REVISAR ESTO PORQUE NO HACE NADA INDEPENDIENTE DE SI APACHO O NO
+    BEQ EsperarSuelto      ; Si fue rebote, volver a empezar
    
     ; Botón presionado confirmado - cambiar de nivel
 	ADD R6, R6, #1
 	MOV R5, #0
     B Ciclo
 
-;-------------------------------------------------------------------------------------------------------------
-;----------------------------------- Control de tiempo para apagar leds --------------------------------------
-    ; Esperar interrupción del timer (igual que Nivel 2)
-EsperarTimerNivel1
-    LDR R1, =GPTM_TIMER0_RIS_R
-    LDR R0, [R1]
-    CMP R0, #0x1
-    BEQ ApagarPE0  ; Cuando el timer genera interrupción, apagar el LED
-    B EsperarTimerNivel1
-
-ApagarPE0
-    LDR R1, =GPTM_TIMER0_ICR_R
-    MOV R0, #0x1
-    STR R0, [R1]   ; Limpiar interrupción
-
-    LDR R1, =GPIO_PORTE_DATA 
-    MOV R0, #0x00   ; Apagar PE0
-    STR R0, [R1]  
-
-    B EsperarSuelto
 
  
 ;------Configuración del Timer------ 
