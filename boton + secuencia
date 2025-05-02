@@ -1,0 +1,100 @@
+;---------Direcciones de registros------------------------ 
+GPIO_PORTE_DATA  EQU 0x400243FC 
+GPIO_PORTF_DATA  EQU 0x400253FC
+GPIO_PORTA_DATA  EQU 0x400403FC	
+GPTM_RCGCTIMER_R EQU 0x400FE604 
+GPTM_TIMER0_CFG_R EQU 0x40030000 
+GPTM_TIMER0_CTL_R EQU 0x4003000C 
+GPTM_TIMER0_TAMR_R EQU 0x40030004 
+GPTM_TIMER0_IMR_R EQU 0x40030018 
+GPTM_TIMER0_ICR_R EQU 0x40030024 
+GPTM_TIMER0_RIS_R EQU 0x4003001C 
+GPTM_TIMER0_TAILR_R EQU 0x40030028 
+GPTM_TIMER0_VALUE_R EQU 0x40030050 
+	
+Tiempo EQU 4000000  
+PA2       EQU 0x40004010; Puerto A2 será el boton. 
+PA3       EQU 0x40004020; Puerto A3 será el boton. 	
+ 
+; --- Código modificado ---
+    AREA    |.text|, CODE, READONLY, ALIGN=2
+    THUMB
+    EXPORT  Start
+    IMPORT  Inicializarpuertos
+
+Start  
+    BL  Inicializarpuertos  
+    BL  ConfTimer  
+
+    MOV R5, #0  ; ? Inicializa el contador en PE0  
+
+Ciclo  
+    ; 1?? Avanzar al siguiente LED  
+    ADD R5, R5, #1  
+    CMP R5, #5  
+    MOVEQ R5, #0  ; ? Si llega a 3, reinicia a PE0  
+
+    ; 2?? Encender el LED correspondiente al contador  
+    LDR R1, =GPIO_PORTE_DATA  
+    MOV R2, #1  
+    LSL R2, R2, R5  
+    STR R2, [R1]  
+
+    ; 3?? Esperar la pulsación del botón PA2  
+EsperarBoton  
+    LDR R1, =PA2  
+    LDR R0, [R1]  
+    AND R0, R0, #0x04  
+    CMP R0, #0x00  ; ? Si está presionado, salir  
+    BEQ Fin  
+
+    ; 4?? Si no se ha presionado, continuar la secuencia  
+    MOV R0, #300  
+    BL  DelayMS  
+    B Ciclo 
+
+DelayMS
+    ; Implementación básica (ajustar según tu sistema)
+    LDR R1, =16000         ; Aprox 1ms para 16MHz
+    MUL R1, R1, R0
+DelayLoop
+    SUBS R1, R1, #1
+    BNE DelayLoop
+    BX  LR
+
+Fin  
+    BX  LR  
+
+;----------------------------------------------------------------------------------------------------------
+ConfTimer 
+    ; Habilita reloj del Timer0 
+    LDR R1, =GPTM_RCGCTIMER_R 
+    LDR R0, [R1] 
+    ORR R0, R0, #0x1 
+    STR R0, [R1] 
+     
+    LDR R1, =GPTM_TIMER0_CFG_R 
+    MOV R0, #0x00 
+    STR R0, [R1] 
+     
+    LDR R1, =GPTM_TIMER0_TAMR_R 
+    MOV R0, #0x02 
+    STR R0, [R1] 
+     
+    LDR R1, =GPTM_TIMER0_TAILR_R 
+    LDR R0, =Tiempo 
+    STR R0, [R1] 
+    
+    LDR R1, =GPTM_TIMER0_IMR_R 
+    MOV R0, #0x01 
+    STR R0, [R1] 
+    
+    LDR R1, =GPTM_TIMER0_CTL_R 
+    MOV R0, #0x01 
+    STR R0, [R1] 
+    BX  LR 
+ 
+ 
+    ALIGN 
+    END
+		
